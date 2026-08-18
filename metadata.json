@@ -1,0 +1,6 @@
+{
+  "name": "Ultimate Pet Care & Expense Tracker",
+  "description": "Comprehensive 12-tab pet management dashboard with health records, expense tracking, budget planner, weight trends, feeding logs, grooming alerts, and Excel/Google Sheets export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
