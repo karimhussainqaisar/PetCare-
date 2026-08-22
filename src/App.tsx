@@ -350,7 +350,7 @@ export default function App() {
       />
 
       {/* 2. Main Sheet Canvas Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-8 transition-all duration-300">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 md:p-8 transition-all duration-300">
         {activeTab === 'dashboard' && (
           <DashboardView
             pet={currentPet}

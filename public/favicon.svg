@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+    <linearGradient id="pawGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF" />
+      <stop offset="100%" stop-color="#F1F5F9" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000000" flood-opacity="0.15" />
+    </filter>
+  </defs>
+
+  <!-- App Background Rounded Tile -->
+  <rect width="64" height="64" rx="16" fill="url(#bgGrad)" />
+
+  <!-- Modern Paw Print Motif with Heart center -->
+  <g filter="url(#shadow)" fill="url(#pawGrad)">
+    <!-- Main Paw Pad (Heart-rounded shape) -->
+    <path d="M32 49 C24 49 20 42 22 36 C23.5 31.5 28 32 32 35 C36 32 40.5 31.5 42 36 C44 42 40 49 32 49 Z" />
+
+    <!-- 4 Toe Pads -->
+    <!-- Toe 1 (Leftmost) -->
+    <ellipse cx="19" cy="28" rx="4.5" ry="6" transform="rotate(-24 19 28)" />
+    
+    <!-- Toe 2 (Inner Left) -->
+    <ellipse cx="27.5" cy="22" rx="4.8" ry="6.5" transform="rotate(-8 27.5 22)" />
+    
+    <!-- Toe 3 (Inner Right) -->
+    <ellipse cx="36.5" cy="22" rx="4.8" ry="6.5" transform="rotate(8 36.5 22)" />
+    
+    <!-- Toe 4 (Rightmost) -->
+    <ellipse cx="45" cy="28" rx="4.5" ry="6" transform="rotate(24 45 28)" />
+  </g>
+
+  <!-- Small Emerald Sparkle Indicator for Health/Care in top right -->
+  <circle cx="49" cy="14" r="4" fill="#10B981" stroke="#FFFFFF" stroke-width="1.5" />
+</svg>
