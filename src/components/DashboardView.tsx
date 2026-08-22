@@ -21,6 +21,8 @@ import {
   Check,
   Layers,
   ChevronRight,
+  DollarSign,
+  BarChart3,
 } from 'lucide-react';
 import {
   Pet,
@@ -48,6 +50,8 @@ import {
   Tooltip,
   LineChart,
   Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -96,7 +100,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenAddModal,
   onToggleTaskComplete,
 }) => {
-  const [graphMode, setGraphMode] = useState<'weight' | 'expenses'>('weight');
+  const [graphMode, setGraphMode] = useState<'weight' | 'daily' | 'monthly'>('weight');
 
   // Synchronized financial metrics across all sheets
   const metrics = calculatePetFinancialMetrics(
@@ -131,7 +135,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     value: metrics.categoryMap[cat],
   }));
 
-  // Weight Trend Data
+  // 1. Weight Trend Data
   const weightChartData = [...weights]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     .map((w) => ({
@@ -139,7 +143,44 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       weight: w.weight,
     }));
 
-  // Monthly Expense Trend Data for the Graph toggle
+  // 2. Daily Total Expenses Data (Chronologically sorted)
+  const dailyExpenseMap = metrics.unified.reduce((acc: Record<string, { total: number; count: number; items: string[] }>, curr) => {
+    const dateStr = curr.date || 'Unknown';
+    if (!acc[dateStr]) {
+      acc[dateStr] = { total: 0, count: 0, items: [] };
+    }
+    acc[dateStr].total += curr.amount;
+    acc[dateStr].count += 1;
+    acc[dateStr].items.push(`${curr.description} ($${curr.amount.toFixed(2)})`);
+    return acc;
+  }, {});
+
+  const dailyExpenseChartData = Object.keys(dailyExpenseMap)
+    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+    .map((dateStr) => {
+      const formattedDate = new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      return {
+        rawDate: dateStr,
+        date: formattedDate,
+        amount: parseFloat(dailyExpenseMap[dateStr].total.toFixed(2)),
+        count: dailyExpenseMap[dateStr].count,
+        items: dailyExpenseMap[dateStr].items,
+      };
+    });
+
+  const peakDailyDay = dailyExpenseChartData.reduce(
+    (max, curr) => (curr.amount > (max?.amount || 0) ? curr : max),
+    dailyExpenseChartData[0]
+  );
+  const avgDailySpend =
+    dailyExpenseChartData.length > 0
+      ? metrics.totalAllExpenses / dailyExpenseChartData.length
+      : 0;
+
+  // 3. Monthly Expense Trend Data
   const monthlyExpenseMap = metrics.unified.reduce((acc: Record<string, number>, curr) => {
     const month = new Date(curr.date).toLocaleDateString('en-US', {
       month: 'short',
@@ -149,7 +190,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     return acc;
   }, {});
 
-  const expenseChartData = Object.keys(monthlyExpenseMap).map((m) => ({
+  const monthlyExpenseChartData = Object.keys(monthlyExpenseMap).map((m) => ({
     date: m,
     amount: monthlyExpenseMap[m],
   }));
@@ -229,11 +270,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </motion.header>
 
-      {/* 2. TOP SECTION: Metrics Grid (Left) + Large Graph (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      {/* 2. TOP SECTION: Metrics Grid (Left) + Large Graph (Right) - EQUAL HEIGHTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
         {/* TOP-LEFT: 6 Metric Cards Grid (Span 7 on lg screens) */}
-        <div className="lg:col-span-7 flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-2.5">
+        <div className="lg:col-span-7 flex flex-col h-full">
+          <div className="flex items-center justify-between mb-3 h-6">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
               <span>Metrics & Financial KPIs</span>
@@ -244,7 +285,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
 
           {/* 2 rows × 3 columns grid on md/lg, responsive on mobile */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5 flex-1">
             {/* Card 1: Total Combined Spend */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
@@ -252,7 +293,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               transition={{ duration: 0.25, delay: 0.05 }}
               whileHover={{ y: -2 }}
               onClick={() => onNavigateTab('expenses')}
-              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition cursor-pointer flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition cursor-pointer flex flex-col justify-between h-full"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -285,7 +326,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               transition={{ duration: 0.25, delay: 0.1 }}
               whileHover={{ y: -2 }}
               onClick={() => onNavigateTab('health')}
-              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-purple-300 dark:hover:border-purple-700 transition cursor-pointer flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-purple-300 dark:hover:border-purple-700 transition cursor-pointer flex flex-col justify-between h-full"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -318,7 +359,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               transition={{ duration: 0.25, delay: 0.15 }}
               whileHover={{ y: -2 }}
               onClick={() => onNavigateTab('vaccinations')}
-              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-700 transition cursor-pointer flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-rose-300 dark:hover:border-rose-700 transition cursor-pointer flex flex-col justify-between h-full"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -351,7 +392,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               transition={{ duration: 0.25, delay: 0.2 }}
               whileHover={{ y: -2 }}
               onClick={() => onNavigateTab('medications')}
-              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-amber-300 dark:hover:border-amber-700 transition cursor-pointer flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-amber-300 dark:hover:border-amber-700 transition cursor-pointer flex flex-col justify-between h-full"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -384,7 +425,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               transition={{ duration: 0.25, delay: 0.25 }}
               whileHover={{ y: -2 }}
               onClick={() => onNavigateTab('feeding')}
-              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 transition cursor-pointer flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-emerald-300 dark:hover:border-emerald-700 transition cursor-pointer flex flex-col justify-between h-full"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -417,7 +458,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               transition={{ duration: 0.25, delay: 0.3 }}
               whileHover={{ y: -2 }}
               onClick={() => onNavigateTab('appointments')}
-              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition cursor-pointer flex flex-col justify-between"
+              className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700 transition cursor-pointer flex flex-col justify-between h-full"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -450,62 +491,215 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* TOP-RIGHT: Large Graph Block (Span 5 on lg screens) */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.3 }}
-          className="lg:col-span-5 bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between"
-        >
-          {/* Graph Header with Mode Switcher */}
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>
-                  {graphMode === 'weight' ? 'Weight Growth Curve' : 'Monthly Expenditure Trend'}
-                </span>
-              </h3>
-              <p className="text-[11px] text-slate-400">
-                {graphMode === 'weight' ? 'Growth tracking & target health' : 'Consolidated monthly trend'}
-              </p>
-            </div>
-
-            {/* Toggle Buttons */}
-            <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/60 dark:border-slate-700 text-[11px] font-semibold">
-              <button
-                onClick={() => setGraphMode('weight')}
-                className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
-                  graphMode === 'weight'
-                    ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 font-bold shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Weight
-              </button>
-              <button
-                onClick={() => setGraphMode('expenses')}
-                className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
-                  graphMode === 'expenses'
-                    ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 font-bold shadow-xs'
-                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                Spend
-              </button>
-            </div>
+        {/* TOP-RIGHT: Large Graph Block (Span 5 on lg screens) - EXACT MATCHING HEIGHT */}
+        <div className="lg:col-span-5 flex flex-col h-full">
+          <div className="flex items-center justify-between mb-3 h-6">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-indigo-500" />
+              <span>Growth & Expense Trends</span>
+            </h2>
+            <span className="text-[10px] text-slate-400 font-mono">
+              Interactive Visualizer
+            </span>
           </div>
 
-          {/* Graph Body */}
-          <div className="h-56 w-full">
-            {graphMode === 'weight' ? (
-              weightChartData.length > 0 ? (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex-1 flex flex-col justify-between h-full"
+          >
+            {/* Graph Header with 3-Way Mode Switcher */}
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-1.5">
+                  {graphMode === 'weight' && (
+                    <>
+                      <Scale className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <span>Weight Growth Curve</span>
+                    </>
+                  )}
+                  {graphMode === 'daily' && (
+                    <>
+                      <BarChart3 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                      <span>Daily Total Expenses</span>
+                    </>
+                  )}
+                  {graphMode === 'monthly' && (
+                    <>
+                      <Receipt className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span>Monthly Spend Trend</span>
+                    </>
+                  )}
+                </h3>
+                <p className="text-[11px] text-slate-400">
+                  {graphMode === 'weight' && 'Growth tracking & target weight timeline'}
+                  {graphMode === 'daily' && 'Chronological breakdown of daily expenses'}
+                  {graphMode === 'monthly' && 'Consolidated monthly expenditure totals'}
+                </p>
+              </div>
+
+              {/* 3-Tab Mode Switcher */}
+              <div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl border border-slate-200/60 dark:border-slate-700 text-[11px] font-semibold">
+                <button
+                  onClick={() => setGraphMode('weight')}
+                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                    graphMode === 'weight'
+                      ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-indigo-300 font-bold shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Weight
+                </button>
+                <button
+                  onClick={() => setGraphMode('daily')}
+                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                    graphMode === 'daily'
+                      ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-300 font-bold shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Daily Spend
+                </button>
+                <button
+                  onClick={() => setGraphMode('monthly')}
+                  className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                    graphMode === 'monthly'
+                      ? 'bg-white dark:bg-slate-700 text-purple-600 dark:text-purple-300 font-bold shadow-xs'
+                      : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Monthly
+                </button>
+              </div>
+            </div>
+
+            {/* Graph Canvas Container (Stretches smoothly to fill container) */}
+            <div className="flex-1 w-full min-h-[200px] my-1">
+              {graphMode === 'weight' ? (
+                weightChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={weightChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366F1" stopOpacity={0.25} />
+                          <stop offset="95%" stopColor="#6366F1" stopOpacity={0.0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#94a3b8"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={11}
+                        domain={['auto', 'auto']}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <Tooltip
+                        formatter={(val: number) => [`${val} ${pet.weightUnit}`, 'Weight']}
+                        contentStyle={{
+                          borderRadius: '12px',
+                          border: '1px solid #e2e8f0',
+                          fontSize: '12px',
+                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                        }}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="weight"
+                        stroke="#6366F1"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#weightGrad)"
+                        dot={{ r: 4, fill: '#6366F1', strokeWidth: 2, stroke: '#fff' }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-xs text-slate-400 space-y-2">
+                    <Scale className="w-8 h-8 text-slate-300" />
+                    <span>No weight entries recorded yet.</span>
+                  </div>
+                )
+              ) : graphMode === 'daily' ? (
+                dailyExpenseChartData.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={dailyExpenseChartData} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="dailyBarGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#10B981" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#059669" stopOpacity={0.7} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        stroke="#94a3b8"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) => `$${val}`}
+                      />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-white dark:bg-slate-900 p-3 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 text-xs space-y-1">
+                                <div className="font-bold text-slate-900 dark:text-white flex items-center justify-between gap-4">
+                                  <span>{data.rawDate}</span>
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+                                    ${data.amount.toFixed(2)}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-500 border-t border-slate-100 dark:border-slate-800 pt-1">
+                                  <span className="font-medium">{data.count} items logged:</span>
+                                  <ul className="list-disc list-inside text-[10px] text-slate-600 dark:text-slate-400 max-h-24 overflow-y-auto mt-0.5">
+                                    {data.items.map((item: string, i: number) => (
+                                      <li key={i} className="truncate">{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar
+                        dataKey="amount"
+                        fill="url(#dailyBarGrad)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={36}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex flex-col items-center justify-center text-xs text-slate-400 space-y-2">
+                    <Receipt className="w-8 h-8 text-slate-300" />
+                    <span>No daily expense entries recorded yet.</span>
+                  </div>
+                )
+              ) : monthlyExpenseChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={weightChartData}>
+                  <AreaChart data={monthlyExpenseChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
-                      <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#6366F1" stopOpacity={0.25} />
-                        <stop offset="95%" stopColor="#6366F1" stopOpacity={0.0} />
+                      <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.25} />
+                        <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -519,108 +713,98 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <YAxis
                       stroke="#94a3b8"
                       fontSize={11}
-                      domain={['auto', 'auto']}
                       tickLine={false}
                       axisLine={false}
+                      tickFormatter={(val) => `$${val}`}
                     />
                     <Tooltip
-                      formatter={(val: number) => [`${val} ${pet.weightUnit}`, 'Weight']}
+                      formatter={(val: number) => [`$${val.toFixed(2)}`, 'Monthly Spend']}
                       contentStyle={{
                         borderRadius: '12px',
                         border: '1px solid #e2e8f0',
                         fontSize: '12px',
+                        boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
                       }}
                     />
                     <Area
                       type="monotone"
-                      dataKey="weight"
-                      stroke="#6366F1"
+                      dataKey="amount"
+                      stroke="#8B5CF6"
                       strokeWidth={3}
                       fillOpacity={1}
-                      fill="url(#weightGrad)"
-                      dot={{ r: 4, fill: '#6366F1', strokeWidth: 2, stroke: '#fff' }}
+                      fill="url(#spendGrad)"
+                      dot={{ r: 4, fill: '#8B5CF6', strokeWidth: 2, stroke: '#fff' }}
                       activeDot={{ r: 6 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="h-full flex flex-col items-center justify-center text-xs text-slate-400 space-y-2">
-                  <Scale className="w-8 h-8 text-slate-300" />
-                  <span>No weight entries recorded yet.</span>
+                  <Receipt className="w-8 h-8 text-slate-300" />
+                  <span>No monthly expense history logged yet.</span>
                 </div>
-              )
-            ) : expenseChartData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={expenseChartData}>
-                  <defs>
-                    <linearGradient id="spendGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis
-                    dataKey="date"
-                    stroke="#94a3b8"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="#94a3b8"
-                    fontSize={11}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    formatter={(val: number) => [`$${val.toFixed(2)}`, 'Spend']}
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      fontSize: '12px',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="amount"
-                    stroke="#10B981"
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#spendGrad)"
-                    dot={{ r: 4, fill: '#10B981', strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 6 }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex flex-col items-center justify-center text-xs text-slate-400 space-y-2">
-                <Receipt className="w-8 h-8 text-slate-300" />
-                <span>No expense history logged yet.</span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
-            <span className="text-slate-400 font-medium">Latest weight: {pet.weight} {pet.weightUnit}</span>
-            <button
-              onClick={() => onNavigateTab(graphMode === 'weight' ? 'weight' : 'analytics')}
-              className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <span>Explore History</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-        </motion.div>
+            {/* Dynamic Graph Footer */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+              {graphMode === 'weight' && (
+                <>
+                  <span className="text-slate-500 font-medium">
+                    Latest Weight: <strong className="text-indigo-600 dark:text-indigo-400">{pet.weight} {pet.weightUnit}</strong>
+                  </span>
+                  <button
+                    onClick={() => onNavigateTab('weight')}
+                    className="text-indigo-600 dark:text-indigo-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Log / History</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </>
+              )}
+
+              {graphMode === 'daily' && (
+                <>
+                  <span className="text-slate-500 font-medium">
+                    Peak Day: <strong className="text-emerald-600 dark:text-emerald-400">{peakDailyDay ? `$${peakDailyDay.amount.toFixed(2)} (${peakDailyDay.date})` : 'N/A'}</strong>
+                  </span>
+                  <button
+                    onClick={() => onNavigateTab('expenses')}
+                    className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>View All Expenses</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </>
+              )}
+
+              {graphMode === 'monthly' && (
+                <>
+                  <span className="text-slate-500 font-medium">
+                    Monthly Average: <strong className="text-purple-600 dark:text-purple-400">${(metrics.totalAllExpenses / Math.max(monthlyExpenseChartData.length, 1)).toFixed(2)}</strong>
+                  </span>
+                  <button
+                    onClick={() => onNavigateTab('analytics')}
+                    className="text-purple-600 dark:text-purple-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Full Analytics</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </>
+              )}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
-      {/* 3. BOTTOM SECTION: Wide Card (Left) + Pie Chart (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6">
+      {/* 3. BOTTOM SECTION: Wide Card (Left) + Pie Chart (Right) - EQUAL HEIGHTS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
         {/* BOTTOM-LEFT: Wide Rectangular Block (Care Schedule, Health Visits & Active Tasks) */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3, delay: 0.1 }}
-          className="lg:col-span-7 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4"
+          className="lg:col-span-7 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between space-y-4 h-full"
         >
           <div>
             <div className="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -781,7 +965,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.3, delay: 0.15 }}
-          className="lg:col-span-5 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between"
+          className="lg:col-span-5 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs flex flex-col justify-between h-full"
         >
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -886,3 +1070,4 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     </div>
   );
 };
+
