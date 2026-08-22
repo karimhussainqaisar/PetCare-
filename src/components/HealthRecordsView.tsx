@@ -4,6 +4,7 @@ import { FormulaTooltip } from './FormulaTooltip';
 import { Stethoscope, Plus, Search, Calendar, DollarSign, Filter, Pencil, Trash2, X } from 'lucide-react';
 
 interface HealthRecordsViewProps {
+  petId?: string;
   records?: HealthRecord[];
   healthRecords?: HealthRecord[];
   showFormulas: boolean;
@@ -16,6 +17,7 @@ interface HealthRecordsViewProps {
 }
 
 export const HealthRecordsView: React.FC<HealthRecordsViewProps> = ({
+  petId,
   records,
   healthRecords,
   showFormulas,
@@ -92,12 +94,12 @@ export const HealthRecordsView: React.FC<HealthRecordsViewProps> = ({
       const existing = actualRecords.find((rec) => rec.id === editingId);
       handleEditFn({
         id: editingId,
-        petId: existing?.petId || 'pet-bella',
+        petId: existing?.petId || petId || 'pet-bella',
         ...newForm,
       });
     } else {
       handleAdd({
-        petId: actualRecords[0]?.petId || 'pet-bella',
+        petId: petId || actualRecords[0]?.petId || 'pet-bella',
         ...newForm,
       });
     }
@@ -128,7 +130,9 @@ export const HealthRecordsView: React.FC<HealthRecordsViewProps> = ({
             <span className="p-2 bg-purple-100 text-purple-800 rounded-lg text-xs font-bold font-mono">
               SHEET: tblHealth
             </span>
-            <span className="text-xs text-slate-400">• Health Database</span>
+            <span className="text-xs text-purple-700 dark:text-purple-400 font-bold bg-purple-50 dark:bg-purple-950/40 px-2.5 py-0.5 rounded-full border border-purple-200 dark:border-purple-800">
+              🔄 Synced to Master Expenses
+            </span>
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
             Veterinary & Health History Log

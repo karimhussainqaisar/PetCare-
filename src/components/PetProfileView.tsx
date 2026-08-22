@@ -2,18 +2,26 @@ import React, { useState } from 'react';
 import { Pet, PetSpecies } from '../types';
 import { calculatePetAge } from '../utils/petCalculations';
 import { FormulaTooltip } from './FormulaTooltip';
-import { Save, User, Shield, Stethoscope, AlertCircle, Camera, Check } from 'lucide-react';
+import { Save, User, Shield, Stethoscope, AlertCircle, Camera, Check, Plus, PawPrint, Trash2 } from 'lucide-react';
 
 interface PetProfileViewProps {
   pet: Pet;
+  pets?: Pet[];
   showFormulas: boolean;
   onUpdatePet: (updatedPet: Pet) => void;
+  onSelectPet?: (petId: string) => void;
+  onAddPetModal?: () => void;
+  onDeletePet?: (petId: string) => void;
 }
 
 export const PetProfileView: React.FC<PetProfileViewProps> = ({
   pet,
+  pets = [],
   showFormulas,
   onUpdatePet,
+  onSelectPet,
+  onAddPetModal,
+  onDeletePet,
 }) => {
   const [formData, setFormData] = useState<Pet>({ ...pet });
   const [isSaved, setIsSaved] = useState(false);
@@ -40,8 +48,78 @@ export const PetProfileView: React.FC<PetProfileViewProps> = ({
     setTimeout(() => setIsSaved(false), 2500);
   };
 
+  const handleDeleteCurrentPet = () => {
+    if (pets.length <= 1) {
+      alert('You must have at least one pet profile.');
+      return;
+    }
+    onDeletePet?.(pet.id);
+  };
+
   return (
     <div className="space-y-6 pb-12 max-w-5xl mx-auto">
+      {/* Pet Profiles Switcher Bar */}
+      {pets.length > 0 && (
+        <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 overflow-x-auto py-1 scrollbar-none">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5 mr-1">
+              <PawPrint className="w-4 h-4 text-emerald-600" />
+              <span>Pet Profiles:</span>
+            </span>
+            {pets.map((p) => {
+              const isSelected = p.id === pet.id;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => onSelectPet?.(p.id)}
+                  type="button"
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200'
+                  }`}
+                >
+                  <img
+                    src={p.avatarUrl || 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=100&q=80'}
+                    alt={p.name}
+                    className="w-5 h-5 rounded-full object-cover"
+                  />
+                  <span>{p.name}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isSelected ? 'bg-emerald-700/80 text-emerald-100' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'}`}>
+                    {p.species}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onAddPetModal && (
+              <button
+                type="button"
+                onClick={onAddPetModal}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Add Another Pet</span>
+              </button>
+            )}
+
+            {pets.length > 1 && onDeletePet && (
+              <button
+                type="button"
+                onClick={handleDeleteCurrentPet}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl text-xs font-bold border border-rose-200 dark:border-rose-900/50 transition cursor-pointer"
+                title="Delete this pet profile"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Delete Profile</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Title & Legend Banner */}
       <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>

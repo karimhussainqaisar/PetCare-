@@ -5,6 +5,7 @@ import { FormulaTooltip } from './FormulaTooltip';
 import { Pill, Plus, Clock, CheckCircle, Pencil, Trash2, X } from 'lucide-react';
 
 interface MedicationTrackerViewProps {
+  petId?: string;
   medications: Medication[];
   showFormulas: boolean;
   onAddMedication: (med: Omit<Medication, 'id'>) => void;
@@ -13,6 +14,7 @@ interface MedicationTrackerViewProps {
 }
 
 export const MedicationTrackerView: React.FC<MedicationTrackerViewProps> = ({
+  petId,
   medications = [],
   showFormulas,
   onAddMedication,
@@ -68,12 +70,12 @@ export const MedicationTrackerView: React.FC<MedicationTrackerViewProps> = ({
       const existing = medications.find((item) => item.id === editingId);
       onEditMedication({
         id: editingId,
-        petId: existing?.petId || 'pet-bella',
+        petId: existing?.petId || petId || 'pet-bella',
         ...newMed,
       });
     } else {
       onAddMedication({
-        petId: medications[0]?.petId || 'pet-bella',
+        petId: petId || medications[0]?.petId || 'pet-bella',
         ...newMed,
       });
     }
@@ -98,6 +100,7 @@ export const MedicationTrackerView: React.FC<MedicationTrackerViewProps> = ({
   const activeCount = medications.filter(
     (m) => getMedicationStatus(m.startDate, m.endDate).status === 'ACTIVE'
   ).length;
+  const totalCost = medications.reduce((sum, m) => sum + (m.cost || 0), 0);
 
   return (
     <div className="space-y-6 pb-12">
@@ -108,17 +111,30 @@ export const MedicationTrackerView: React.FC<MedicationTrackerViewProps> = ({
             <span className="p-2 bg-amber-100 text-amber-800 rounded-lg text-xs font-bold font-mono">
               SHEET: tblMedications
             </span>
-            <span className="text-xs text-slate-400">• Active Prescriptions</span>
+            <span className="text-xs text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+              🔄 Synced to Master Expenses
+            </span>
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
             Medication & Prescription Log
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Tracks dosage, frequency, course end dates, and days remaining automatically.
+            Tracks dosage, frequency, course end dates, and days remaining. Prescription costs automatically sync with the Expense Tracker.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Total Cost Badge */}
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-right">
+            <div className="text-[11px] font-bold text-slate-500 uppercase">
+              Total Medication Spend
+            </div>
+            <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
+              ${totalCost.toFixed(2)}
+            </div>
+            <FormulaTooltip formula="=SUM(tblMedications[Cost])" showAlways={showFormulas} />
+          </div>
+
           <div className="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-300">
             🟢 Active Courses: {activeCount}
           </div>

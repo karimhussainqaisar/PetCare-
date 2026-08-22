@@ -5,6 +5,7 @@ import { FormulaTooltip } from './FormulaTooltip';
 import { Scissors, Plus, Sparkles, AlertTriangle, CheckCircle2, Pencil, Trash2, X } from 'lucide-react';
 
 interface GroomingTrackerViewProps {
+  petId?: string;
   groomings: GroomingRecord[];
   showFormulas: boolean;
   onAddGrooming: (g: Omit<GroomingRecord, 'id'>) => void;
@@ -24,6 +25,7 @@ export const GROOMING_SERVICES: GroomingServiceType[] = [
 ];
 
 export const GroomingTrackerView: React.FC<GroomingTrackerViewProps> = ({
+  petId,
   groomings = [],
   showFormulas,
   onAddGrooming,
@@ -69,12 +71,12 @@ export const GroomingTrackerView: React.FC<GroomingTrackerViewProps> = ({
       const existing = groomings.find((item) => item.id === editingId);
       onEditGrooming({
         id: editingId,
-        petId: existing?.petId || 'pet-bella',
+        petId: existing?.petId || petId || 'pet-bella',
         ...newGrm,
       });
     } else {
       onAddGrooming({
-        petId: groomings[0]?.petId || 'pet-bella',
+        petId: petId || groomings[0]?.petId || 'pet-bella',
         ...newGrm,
       });
     }

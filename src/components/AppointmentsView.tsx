@@ -4,6 +4,7 @@ import { FormulaTooltip } from './FormulaTooltip';
 import { Calendar, Plus, CheckCircle2, Clock, Filter, AlertCircle, Pencil, Trash2, X } from 'lucide-react';
 
 interface AppointmentsViewProps {
+  petId?: string;
   appointments: AppointmentTask[];
   showFormulas: boolean;
   onAddAppointment: (apt: Omit<AppointmentTask, 'id'>) => void;
@@ -13,6 +14,7 @@ interface AppointmentsViewProps {
 }
 
 export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
+  petId,
   appointments = [],
   showFormulas,
   onAddAppointment,
@@ -67,12 +69,12 @@ export const AppointmentsView: React.FC<AppointmentsViewProps> = ({
       const existing = appointments.find((item) => item.id === editingId);
       onEditAppointment({
         id: editingId,
-        petId: existing?.petId || 'pet-bella',
+        petId: existing?.petId || petId || 'pet-bella',
         ...newApt,
       });
     } else {
       onAddAppointment({
-        petId: appointments[0]?.petId || 'pet-bella',
+        petId: petId || appointments[0]?.petId || 'pet-bella',
         ...newApt,
       });
     }

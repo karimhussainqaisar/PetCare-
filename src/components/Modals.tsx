@@ -28,7 +28,7 @@ export const QuickAddModals: React.FC<AddModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl relative animate-scale-up">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-lg w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl relative animate-scale-up">
         <button
           onClick={onClose}
           className="absolute right-5 top-5 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
@@ -71,6 +71,16 @@ export const QuickAddModals: React.FC<AddModalProps> = ({
             petId={activePetId}
             onSave={(data) => {
               onAddWeight(data);
+              onClose();
+            }}
+          />
+        )}
+
+        {type === 'vaccine' && (
+          <AddVaccineModalForm
+            petId={activePetId}
+            onSave={(data) => {
+              onAddVaccine(data);
               onClose();
             }}
           />
@@ -390,6 +400,97 @@ function AddWeightModalForm({ petId, onSave }: { petId: string; onSave: (d: any)
           className="w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow"
         >
           Record Weight
+        </button>
+      </div>
+    </form>
+  );
+}
+
+function AddVaccineModalForm({ petId, onSave }: { petId: string; onSave: (d: any) => void }) {
+  const [form, setForm] = useState({
+    vaccine: '',
+    dateGiven: new Date().toISOString().split('T')[0],
+    nextDue: '',
+    veterinarian: '',
+    batchNumber: '',
+    cost: 35,
+    notes: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.vaccine) return;
+    onSave({ petId, ...form });
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <h3 className="text-lg font-bold text-slate-900 dark:text-white">Log Vaccination</h3>
+
+      <div className="space-y-3 text-xs">
+        <div>
+          <label className="block font-bold mb-1">Vaccine Name *</label>
+          <input
+            type="text"
+            required
+            placeholder="Rabies, DHPP, Bordetella..."
+            value={form.vaccine}
+            onChange={(e) => setForm({ ...form, vaccine: e.target.value })}
+            className="w-full px-3 py-2 rounded-xl border font-bold"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block font-bold mb-1">Date Given</label>
+            <input
+              type="date"
+              value={form.dateGiven}
+              onChange={(e) => setForm({ ...form, dateGiven: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border"
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1">Next Due Date</label>
+            <input
+              type="date"
+              value={form.nextDue}
+              onChange={(e) => setForm({ ...form, nextDue: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block font-bold mb-1">Veterinarian</label>
+            <input
+              type="text"
+              placeholder="Dr. Jenkins"
+              value={form.veterinarian}
+              onChange={(e) => setForm({ ...form, veterinarian: e.target.value })}
+              className="w-full px-3 py-2 rounded-xl border"
+            />
+          </div>
+          <div>
+            <label className="block font-bold mb-1">Cost ($)</label>
+            <input
+              type="number"
+              step="0.01"
+              value={form.cost || ''}
+              onChange={(e) => setForm({ ...form, cost: parseFloat(e.target.value) || 0 })}
+              className="w-full px-3 py-2 rounded-xl border font-bold"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end space-x-2 pt-2">
+        <button
+          type="submit"
+          className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow cursor-pointer"
+        >
+          Save Vaccination
         </button>
       </div>
     </form>

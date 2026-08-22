@@ -82,6 +82,8 @@ export interface Expense {
   amount: number;
   paymentMethod: 'Credit Card' | 'Debit Card' | 'Cash' | 'Pet Insurance' | 'Other';
   notes: string;
+  source?: 'Direct' | 'Vaccination' | 'Medication' | 'Health Record' | 'Grooming';
+  sourceId?: string;
 }
 
 export interface BudgetItem {

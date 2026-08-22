@@ -5,6 +5,7 @@ import { FormulaTooltip } from './FormulaTooltip';
 import { Syringe, Plus, AlertCircle, CheckCircle, Clock, Pencil, Trash2, X } from 'lucide-react';
 
 interface VaccinationTrackerViewProps {
+  petId?: string;
   vaccinations: Vaccination[];
   showFormulas: boolean;
   onAddVaccination: (vac: Omit<Vaccination, 'id'>) => void;
@@ -13,6 +14,7 @@ interface VaccinationTrackerViewProps {
 }
 
 export const VaccinationTrackerView: React.FC<VaccinationTrackerViewProps> = ({
+  petId,
   vaccinations = [],
   showFormulas,
   onAddVaccination,
@@ -68,12 +70,12 @@ export const VaccinationTrackerView: React.FC<VaccinationTrackerViewProps> = ({
       const existing = vaccinations.find((item) => item.id === editingId);
       onEditVaccination({
         id: editingId,
-        petId: existing?.petId || 'pet-bella',
+        petId: existing?.petId || petId || 'pet-bella',
         ...newVac,
       });
     } else {
       onAddVaccination({
-        petId: vaccinations[0]?.petId || 'pet-bella',
+        petId: petId || vaccinations[0]?.petId || 'pet-bella',
         ...newVac,
       });
     }
@@ -97,6 +99,7 @@ export const VaccinationTrackerView: React.FC<VaccinationTrackerViewProps> = ({
 
   const overdueCount = vaccinations.filter((v) => getVaccinationStatus(v.nextDue).status === 'OVERDUE').length;
   const dueSoonCount = vaccinations.filter((v) => getVaccinationStatus(v.nextDue).status === 'DUE SOON').length;
+  const totalCost = vaccinations.reduce((sum, v) => sum + (v.cost || 0), 0);
 
   return (
     <div className="space-y-6 pb-12">
@@ -107,17 +110,30 @@ export const VaccinationTrackerView: React.FC<VaccinationTrackerViewProps> = ({
             <span className="p-2 bg-rose-100 text-rose-800 rounded-lg text-xs font-bold font-mono">
               SHEET: tblVaccinations
             </span>
-            <span className="text-xs text-slate-400">• Automated Vaccine Alerts</span>
+            <span className="text-xs text-rose-700 dark:text-rose-400 font-bold bg-rose-50 dark:bg-rose-950/40 px-2.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-800">
+              🔄 Synced to Master Expenses
+            </span>
           </div>
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
             Vaccination Schedule & Alert Center
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Automatic status formulas highlight overdue or upcoming booster shots.
+            Automatic status formulas highlight overdue or upcoming booster shots. Costs automatically sync with the Expense Tracker and Budget.
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Total Cost Badge */}
+          <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 text-right">
+            <div className="text-[11px] font-bold text-slate-500 uppercase">
+              Total Vaccine Spend
+            </div>
+            <div className="text-lg font-bold text-rose-600 dark:text-rose-400">
+              ${totalCost.toFixed(2)}
+            </div>
+            <FormulaTooltip formula="=SUM(tblVaccinations[Cost])" showAlways={showFormulas} />
+          </div>
+
           {/* Status Counter Badges */}
           <div className="flex items-center space-x-2 text-xs font-bold">
             <span className="px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 border border-rose-300">

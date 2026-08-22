@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   INITIAL_PETS,
   INITIAL_HEALTH_RECORDS,
@@ -44,6 +44,20 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { GoogleSheetsModal } from './components/GoogleSheetsModal';
 import { QuickAddModals } from './components/Modals';
 
+const STORAGE_PREFIX = 'pet_tracker_v2_';
+
+function loadStored<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(STORAGE_PREFIX + key);
+    if (raw) {
+      return JSON.parse(raw);
+    }
+  } catch (err) {
+    console.error(`Failed to load ${key} from storage:`, err);
+  }
+  return fallback;
+}
+
 export default function App() {
   // Navigation & UI State
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -53,22 +67,81 @@ export default function App() {
     'expense' | 'appointment' | 'weight' | 'vaccine' | 'pet' | null
   >(null);
 
-  // Data Store State
-  const [pets, setPets] = useState<Pet[]>(INITIAL_PETS);
-  const [activePetId, setActivePetId] = useState<string>('pet-bella');
+  // Data Store State with LocalStorage initialization
+  const [pets, setPets] = useState<Pet[]>(() => loadStored('pets', INITIAL_PETS));
+  const [activePetId, setActivePetId] = useState<string>(() => {
+    const storedId = loadStored<string>('active_pet_id', 'pet-bella');
+    return storedId;
+  });
 
-  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>(INITIAL_HEALTH_RECORDS);
-  const [vaccinations, setVaccinations] = useState<Vaccination[]>(INITIAL_VACCINATIONS);
-  const [medications, setMedications] = useState<Medication[]>(INITIAL_MEDICATIONS);
-  const [expenses, setExpenses] = useState<Expense[]>(INITIAL_EXPENSES);
-  const [budgets, setBudgets] = useState<BudgetItem[]>(INITIAL_BUDGETS);
-  const [weights, setWeights] = useState<WeightRecord[]>(INITIAL_WEIGHT_RECORDS);
-  const [feedings, setFeedings] = useState<FeedingRecord[]>(INITIAL_FEEDING_RECORDS);
-  const [groomings, setGroomings] = useState<GroomingRecord[]>(INITIAL_GROOMING_RECORDS);
-  const [appointments, setAppointments] = useState<AppointmentTask[]>(INITIAL_APPOINTMENTS);
+  const [healthRecords, setHealthRecords] = useState<HealthRecord[]>(() =>
+    loadStored('health_records', INITIAL_HEALTH_RECORDS)
+  );
+  const [vaccinations, setVaccinations] = useState<Vaccination[]>(() =>
+    loadStored('vaccinations', INITIAL_VACCINATIONS)
+  );
+  const [medications, setMedications] = useState<Medication[]>(() =>
+    loadStored('medications', INITIAL_MEDICATIONS)
+  );
+  const [expenses, setExpenses] = useState<Expense[]>(() =>
+    loadStored('expenses', INITIAL_EXPENSES)
+  );
+  const [budgets, setBudgets] = useState<BudgetItem[]>(() =>
+    loadStored('budgets', INITIAL_BUDGETS)
+  );
+  const [weights, setWeights] = useState<WeightRecord[]>(() =>
+    loadStored('weights', INITIAL_WEIGHT_RECORDS)
+  );
+  const [feedings, setFeedings] = useState<FeedingRecord[]>(() =>
+    loadStored('feedings', INITIAL_FEEDING_RECORDS)
+  );
+  const [groomings, setGroomings] = useState<GroomingRecord[]>(() =>
+    loadStored('groomings', INITIAL_GROOMING_RECORDS)
+  );
+  const [appointments, setAppointments] = useState<AppointmentTask[]>(() =>
+    loadStored('appointments', INITIAL_APPOINTMENTS)
+  );
 
-  // Current selected pet
-  const currentPet = pets.find((p) => p.id === activePetId) || pets[0];
+  // Synchronize state changes to LocalStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_PREFIX + 'pets', JSON.stringify(pets));
+      localStorage.setItem(STORAGE_PREFIX + 'active_pet_id', JSON.stringify(activePetId));
+      localStorage.setItem(STORAGE_PREFIX + 'health_records', JSON.stringify(healthRecords));
+      localStorage.setItem(STORAGE_PREFIX + 'vaccinations', JSON.stringify(vaccinations));
+      localStorage.setItem(STORAGE_PREFIX + 'medications', JSON.stringify(medications));
+      localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
+      localStorage.setItem(STORAGE_PREFIX + 'budgets', JSON.stringify(budgets));
+      localStorage.setItem(STORAGE_PREFIX + 'weights', JSON.stringify(weights));
+      localStorage.setItem(STORAGE_PREFIX + 'feedings', JSON.stringify(feedings));
+      localStorage.setItem(STORAGE_PREFIX + 'groomings', JSON.stringify(groomings));
+      localStorage.setItem(STORAGE_PREFIX + 'appointments', JSON.stringify(appointments));
+    } catch (err) {
+      console.error('Failed to save data to localStorage:', err);
+    }
+  }, [
+    pets,
+    activePetId,
+    healthRecords,
+    vaccinations,
+    medications,
+    expenses,
+    budgets,
+    weights,
+    feedings,
+    groomings,
+    appointments,
+  ]);
+
+  // Current selected pet (with safe fallback)
+  const currentPet = pets.find((p) => p.id === activePetId) || pets[0] || INITIAL_PETS[0];
+
+  // If activePetId is invalid, rectify it
+  useEffect(() => {
+    if (!pets.some((p) => p.id === activePetId) && pets.length > 0) {
+      setActivePetId(pets[0].id);
+    }
+  }, [pets, activePetId]);
 
   // Filter datasets per selected pet
   const petHealth = healthRecords.filter((h) => h.petId === currentPet.id);
@@ -90,9 +163,19 @@ export default function App() {
     setActivePetId(newPet.id);
   };
 
+  const handleDeletePet = (petIdToDelete: string) => {
+    if (pets.length <= 1) return;
+    const remaining = pets.filter((p) => p.id !== petIdToDelete);
+    setPets(remaining);
+    if (activePetId === petIdToDelete) {
+      setActivePetId(remaining[0].id);
+    }
+  };
+
   const handleAddExpense = (exp: Omit<Expense, 'id'>) => {
     const newExpense: Expense = {
-      id: `exp-${Date.now()}`,
+      id: `exp-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: exp.petId || currentPet.id,
       ...exp,
     };
     setExpenses((prev) => [newExpense, ...prev]);
@@ -100,7 +183,8 @@ export default function App() {
 
   const handleAddHealthRecord = (rec: Omit<HealthRecord, 'id'>) => {
     const newRec: HealthRecord = {
-      id: `health-${Date.now()}`,
+      id: `health-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: rec.petId || currentPet.id,
       ...rec,
     };
     setHealthRecords((prev) => [newRec, ...prev]);
@@ -108,7 +192,8 @@ export default function App() {
 
   const handleAddVaccination = (vac: Omit<Vaccination, 'id'>) => {
     const newVac: Vaccination = {
-      id: `vac-${Date.now()}`,
+      id: `vac-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: vac.petId || currentPet.id,
       ...vac,
     };
     setVaccinations((prev) => [newVac, ...prev]);
@@ -116,7 +201,8 @@ export default function App() {
 
   const handleAddMedication = (med: Omit<Medication, 'id'>) => {
     const newMed: Medication = {
-      id: `med-${Date.now()}`,
+      id: `med-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: med.petId || currentPet.id,
       ...med,
     };
     setMedications((prev) => [newMed, ...prev]);
@@ -135,7 +221,8 @@ export default function App() {
 
   const handleAddWeight = (rec: Omit<WeightRecord, 'id'>) => {
     const newW: WeightRecord = {
-      id: `weight-${Date.now()}`,
+      id: `weight-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: rec.petId || currentPet.id,
       ...rec,
     };
     setWeights((prev) => [...prev, newW]);
@@ -143,7 +230,8 @@ export default function App() {
 
   const handleAddFeeding = (f: Omit<FeedingRecord, 'id'>) => {
     const newF: FeedingRecord = {
-      id: `feed-${Date.now()}`,
+      id: `feed-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: f.petId || currentPet.id,
       ...f,
     };
     setFeedings((prev) => [newF, ...prev]);
@@ -151,7 +239,8 @@ export default function App() {
 
   const handleAddGrooming = (g: Omit<GroomingRecord, 'id'>) => {
     const newG: GroomingRecord = {
-      id: `grm-${Date.now()}`,
+      id: `grm-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: g.petId || currentPet.id,
       ...g,
     };
     setGroomings((prev) => [newG, ...prev]);
@@ -159,7 +248,8 @@ export default function App() {
 
   const handleAddAppointment = (apt: Omit<AppointmentTask, 'id'>) => {
     const newApt: AppointmentTask = {
-      id: `apt-${Date.now()}`,
+      id: `apt-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      petId: apt.petId || currentPet.id,
       ...apt,
     };
     setAppointments((prev) => [newApt, ...prev]);
@@ -248,7 +338,7 @@ export default function App() {
       {/* 1. Top Navigation Bar */}
       <ExcelHeaderBar
         pets={pets}
-        activePetId={activePetId}
+        activePetId={currentPet.id}
         onSelectPet={setActivePetId}
         onOpenAddPetModal={() => setQuickAddType('pet')}
         activeTab={activeTab as any}
@@ -281,13 +371,18 @@ export default function App() {
         {activeTab === 'profile' && (
           <PetProfileView
             pet={currentPet}
+            pets={pets}
             showFormulas={showFormulas}
             onUpdatePet={handleUpdatePet}
+            onSelectPet={setActivePetId}
+            onAddPetModal={() => setQuickAddType('pet')}
+            onDeletePet={handleDeletePet}
           />
         )}
 
         {activeTab === 'health' && (
           <HealthRecordsView
+            petId={currentPet.id}
             healthRecords={petHealth}
             showFormulas={showFormulas}
             onAddHealthRecord={handleAddHealthRecord}
@@ -298,6 +393,7 @@ export default function App() {
 
         {activeTab === 'vaccinations' && (
           <VaccinationTrackerView
+            petId={currentPet.id}
             vaccinations={petVaccinations}
             showFormulas={showFormulas}
             onAddVaccination={handleAddVaccination}
@@ -308,6 +404,7 @@ export default function App() {
 
         {activeTab === 'medications' && (
           <MedicationTrackerView
+            petId={currentPet.id}
             medications={petMedications}
             showFormulas={showFormulas}
             onAddMedication={handleAddMedication}
@@ -318,7 +415,11 @@ export default function App() {
 
         {activeTab === 'expenses' && (
           <ExpenseTrackerView
+            petId={currentPet.id}
             expenses={petExpenses}
+            vaccinations={petVaccinations}
+            medications={petMedications}
+            healthRecords={petHealth}
             showFormulas={showFormulas}
             onAddExpense={handleAddExpense}
             onDeleteExpense={handleDeleteExpense}
@@ -328,8 +429,12 @@ export default function App() {
 
         {activeTab === 'budget' && (
           <PetBudgetView
+            petId={currentPet.id}
             budgets={budgets}
             expenses={petExpenses}
+            vaccinations={petVaccinations}
+            medications={petMedications}
+            healthRecords={petHealth}
             showFormulas={showFormulas}
             onUpdateBudget={handleUpdateBudget}
           />
@@ -337,6 +442,7 @@ export default function App() {
 
         {activeTab === 'weight' && (
           <WeightTrackerView
+            petId={currentPet.id}
             weights={petWeights}
             weightUnit={currentPet.weightUnit}
             showFormulas={showFormulas}
@@ -348,6 +454,7 @@ export default function App() {
 
         {activeTab === 'feeding' && (
           <FeedingTrackerView
+            petId={currentPet.id}
             feedings={petFeedings}
             showFormulas={showFormulas}
             onAddFeeding={handleAddFeeding}
@@ -358,6 +465,7 @@ export default function App() {
 
         {activeTab === 'grooming' && (
           <GroomingTrackerView
+            petId={currentPet.id}
             groomings={petGroomings}
             showFormulas={showFormulas}
             onAddGrooming={handleAddGrooming}
@@ -368,6 +476,7 @@ export default function App() {
 
         {activeTab === 'appointments' && (
           <AppointmentsView
+            petId={currentPet.id}
             appointments={petAppointments}
             showFormulas={showFormulas}
             onAddAppointment={handleAddAppointment}
@@ -411,6 +520,11 @@ export default function App() {
         expenses={petExpenses}
         healthRecords={petHealth}
         vaccinations={petVaccinations}
+        medications={petMedications}
+        budgets={budgets}
+        weights={petWeights}
+        groomings={petGroomings}
+        appointments={petAppointments}
         onExportExcel={handleExportExcel}
       />
 

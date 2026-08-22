@@ -4,6 +4,7 @@ import { FormulaTooltip } from './FormulaTooltip';
 import { Utensils, Plus, Clock, Pencil, Trash2, X } from 'lucide-react';
 
 interface FeedingTrackerViewProps {
+  petId?: string;
   feedings: FeedingRecord[];
   showFormulas: boolean;
   onAddFeeding: (f: Omit<FeedingRecord, 'id'>) => void;
@@ -12,6 +13,7 @@ interface FeedingTrackerViewProps {
 }
 
 export const FeedingTrackerView: React.FC<FeedingTrackerViewProps> = ({
+  petId,
   feedings = [],
   showFormulas,
   onAddFeeding,
@@ -64,12 +66,12 @@ export const FeedingTrackerView: React.FC<FeedingTrackerViewProps> = ({
       const existing = feedings.find((item) => item.id === editingId);
       onEditFeeding({
         id: editingId,
-        petId: existing?.petId || 'pet-bella',
+        petId: existing?.petId || petId || 'pet-bella',
         ...newFeed,
       });
     } else {
       onAddFeeding({
-        petId: feedings[0]?.petId || 'pet-bella',
+        petId: petId || feedings[0]?.petId || 'pet-bella',
         ...newFeed,
       });
     }

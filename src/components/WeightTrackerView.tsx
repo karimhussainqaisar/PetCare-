@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 
 interface WeightTrackerViewProps {
+  petId?: string;
   weights: WeightRecord[];
   weightUnit: 'kg' | 'lbs';
   showFormulas: boolean;
@@ -22,6 +23,7 @@ interface WeightTrackerViewProps {
 }
 
 export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
+  petId,
   weights = [],
   weightUnit,
   showFormulas,
@@ -82,12 +84,12 @@ export const WeightTrackerView: React.FC<WeightTrackerViewProps> = ({
       const existing = weights.find((item) => item.id === editingId);
       onEditWeight({
         id: editingId,
-        petId: existing?.petId || 'pet-bella',
+        petId: existing?.petId || petId || 'pet-bella',
         ...newVal,
       });
     } else {
       onAddWeight({
-        petId: weights[0]?.petId || 'pet-bella',
+        petId: petId || weights[0]?.petId || 'pet-bella',
         ...newVal,
       });
     }
